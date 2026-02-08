@@ -1,7 +1,9 @@
 package com.ai.codereview.auth.utility;
 
 import java.util.Date;
+import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -12,22 +14,27 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-  private final String SECRET_KEY = "secret-key-very-secure";
-  private final long EXPIRATION = 1000 * 60 * 60; // 1 hour
+  @Value("${jwt.secret}")
+  private String secretKey;
+
+  @Value("${jwt.expiration}")
+  private long expiration;
 
   public String generateToken(Long userId, String email) {
+    SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
     return Jwts.builder()
         .setSubject(email)
         .claim("userId", userId)
         .setIssuedAt(new Date())
-        .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-        .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256)
+        .setExpiration(new Date(System.currentTimeMillis() + expiration))
+        .signWith(key, SignatureAlgorithm.HS256)
         .compact();
   }
 
   public Claims validateToken(String token) {
+    SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
     return Jwts.parserBuilder()
-        .setSigningKey(SECRET_KEY.getBytes())
+        .setSigningKey(key)
         .build()
         .parseClaimsJws(token)
         .getBody();
